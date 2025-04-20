@@ -14,16 +14,6 @@ if %ERRORLEVEL% neq 0 (
 )
 echo .exe Успешно собран.
 
-
-set ResHack="R:\Program_Files\resource_hacker\ResourceHacker.exe"
-if exist "%ResHack%" (
-    echo Resource Hacker найден, выполняю команды...
-    "%ResHack%" -open ./riff.exe -save ./riff.exe -action addoverwrite -res ".\res\riff.ico" -mask ICONGROUP,MAINICON,
-) else (
-    echo Ошибка: Resource Hacker не найден по пути "%ResHack%".
-	echo Иконка не установлена.
-)
-
 set TOOL1=%cd%\res\upx.exe
 if defined UPX (
     set "UPX="
