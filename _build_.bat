@@ -6,7 +6,7 @@ echo off
 chcp 65001
 
 echo Начинаю сборку .exe
-go build -o ./riff.exe -ldflags="-s -w" -trimpath -buildmode=exe -tags=release -asmflags="-trimpath" -mod=readonly ^
+go build -o ./riff.exe -ldflags="-s -w -buildid=" -trimpath -buildmode=exe -tags=release -asmflags="-trimpath" -mod=readonly ^
 main_logic.go main.go
 if %ERRORLEVEL% neq 0 (
     echo Ошибка: Сборка завершилась с ошибкой. Код ошибки: %ERRORLEVEL%
