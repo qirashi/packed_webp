@@ -12,13 +12,12 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		os.Stderr.WriteString("Usage: packed_webp <files>\n")
+		os.Stderr.WriteString("Usage: packed_webp <files...>\n")
 		os.Exit(1)
 	}
 
 	for _, path := range os.Args[1:] {
-		_, err := os.Stat(path)
-		if err != nil {
+		if _, err := os.Stat(path); err != nil {
 			os.Stderr.WriteString("Error accessing path: " + path + "\n")
 			continue
 		}
