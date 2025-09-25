@@ -8,12 +8,27 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 func main() {
 	if len(os.Args) < 2 {
 		os.Stderr.WriteString("Usage: packed_webp [files & folders...]\n")
 		os.Exit(1)
+	}
+
+	numWorkers := 2 // Можно использовать runtime.NumCPU() с импортом runtime
+	jobs := make(chan string, numWorkers*2)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for file := range jobs {
+				processFile(file)
+			}
+		}()
 	}
 
 	for _, path := range os.Args[1:] {
@@ -30,14 +45,17 @@ func main() {
 					return nil
 				}
 				if !d.IsDir() {
-					processFile(p)
+					jobs <- p
 				}
 				return nil
 			})
 		} else {
-			processFile(path)
+			jobs <- path
 		}
 	}
+
+	close(jobs)
+	wg.Wait()
 }
 
 func processFile(filePath string) {
@@ -53,11 +71,7 @@ func processFile(filePath string) {
 			os.Stderr.WriteString("Successfully unpacked: " + filePath + " -> " + newName + "\n")
 		}
 
-	case (ext == ".txt" || ext == ".webp") && !strings.Contains(baseName, ".packed"):
-		if ext == ".txt" {
-			filePath = strings.TrimSuffix(filePath, ".txt") + ".webp"
-		}
-
+	case ext == ".webp" && !strings.Contains(baseName, ".packed"):
 		if err := PackWebp(filePath); err != nil {
 			os.Stderr.WriteString("Pack error [" + filePath + "]: " + err.Error() + "\n")
 		} else {
