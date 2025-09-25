@@ -5,9 +5,9 @@
 package main
 
 import (
+	"os"
 	"bytes"
 	"encoding/binary"
-	"os"
 	"strings"
 )
 
@@ -20,17 +20,10 @@ func replaceExt(filename, oldExt, newExt string) string {
 	return strings.TrimSuffix(filename, oldExt) + newExt
 }
 
-func logErr(err error, msg string) error {
-	if err != nil {
-		os.Stderr.WriteString(msg + ": " + err.Error() + "\n")
-	}
-	return err
-}
-
 func removeFiles(files ...string) error {
 	for _, f := range files {
 		if err := os.Remove(f); err != nil {
-			return logErr(err, "Cleanup failed")
+			return err
 		}
 	}
 	return nil
@@ -39,36 +32,33 @@ func removeFiles(files ...string) error {
 func UnpackWebp(packedFile string) error {
 	data, err := os.ReadFile(packedFile)
 	if err != nil {
-		return logErr(err, "Read error")
+		return err
 	}
 
 	extrIndex := bytes.LastIndex(data, []byte(ExtrSignature))
 	if extrIndex == -1 {
-		os.Stderr.WriteString("extr signature not found")
-		return nil
+		return os.ErrInvalid
 	}
 
 	if len(data) < extrIndex+8 || len(data) < extrIndex+8+int(binary.LittleEndian.Uint32(data[extrIndex+4:extrIndex+8])) {
-		os.Stderr.WriteString("invalid file structure")
-		return nil
+		return os.ErrInvalid
 	}
 
 	extraData := data[extrIndex+8 : extrIndex+8+int(binary.LittleEndian.Uint32(data[extrIndex+4:extrIndex+8]))]
 	
 	txtFile := replaceExt(packedFile, ".packed.webp", ".txt")
 	if err := os.WriteFile(txtFile, extraData, 0644); err != nil {
-		return logErr(err, "Txt write failed")
+		return err
 	}
 
 	newWebpData := data[:extrIndex]
 	if !bytes.HasPrefix(newWebpData, []byte(RiffHeader)) {
-		os.Stderr.WriteString("invalid WEBP header")
-		return nil
+		return os.ErrInvalid
 	}
 
 	binary.LittleEndian.PutUint32(newWebpData[4:8], uint32(len(newWebpData)-8))
 	if err := os.WriteFile(replaceExt(packedFile, ".packed.webp", ".webp"), newWebpData, 0644); err != nil {
-		return logErr(err, "Webp write failed")
+		return err
 	}
 
 	return removeFiles(packedFile)
@@ -78,17 +68,16 @@ func PackWebp(webpFile string) error {
 	txtFile := replaceExt(webpFile, ".webp", ".txt")
 	extraData, err := os.ReadFile(txtFile)
 	if err != nil {
-		return logErr(err, "Txt read error")
+		return err
 	}
 
 	webpData, err := os.ReadFile(webpFile)
 	if err != nil {
-		return logErr(err, "Read error")
+		return err
 	}
 
 	if !bytes.HasPrefix(webpData, []byte(RiffHeader)) {
-		os.Stderr.WriteString("invalid RIFF header")
-		return nil
+		return os.ErrInvalid
 	}
 
 	buf := bytes.NewBuffer(webpData)
@@ -103,7 +92,7 @@ func PackWebp(webpFile string) error {
 	binary.LittleEndian.PutUint32(buf.Bytes()[4:8], uint32(buf.Len()-8))
 	
 	if err := os.WriteFile(replaceExt(webpFile, ".webp", ".packed.webp"), buf.Bytes(), 0644); err != nil {
-		return logErr(err, "Write error")
+		return err
 	}
 
 	return removeFiles(webpFile, txtFile)
