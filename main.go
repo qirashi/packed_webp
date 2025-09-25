@@ -12,45 +12,60 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		os.Stderr.WriteString("Usage: packed_webp <files...>\n")
+		os.Stderr.WriteString("Usage: packed_webp [files & folders...]\n")
 		os.Exit(1)
 	}
 
 	for _, path := range os.Args[1:] {
-		if _, err := os.Stat(path); err != nil {
+		info, err := os.Stat(path)
+		if err != nil {
 			os.Stderr.WriteString("Error accessing path: " + path + "\n")
 			continue
 		}
-		processFile(path)
+
+		if info.IsDir() {
+			filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+				if err != nil {
+					os.Stderr.WriteString("Error accessing: " + p + " -> " + err.Error() + "\n")
+					return nil
+				}
+				if !d.IsDir() {
+					processFile(p)
+				}
+				return nil
+			})
+		} else {
+			processFile(path)
+		}
 	}
 }
 
 func processFile(filePath string) {
-    baseName := filepath.Base(filePath)
-    ext := filepath.Ext(filePath)
+	baseName := filepath.Base(filePath)
+	ext := filepath.Ext(filePath)
 
-    switch {
-    case strings.HasSuffix(baseName, ".packed.webp"):
-        if err := UnpackWebp(filePath); err != nil {
-            os.Stderr.WriteString("Unpack error [" + filePath + "]: " + err.Error() + "\n")
-        } else {
-            newName := strings.TrimSuffix(filePath, ".packed.webp") + ".webp"
-            os.Stderr.WriteString("Successfully unpacked: " + filePath + " -> " + newName + "\n")
-        }
+	switch {
+	case strings.HasSuffix(baseName, ".packed.webp"):
+		if err := UnpackWebp(filePath); err != nil {
+			os.Stderr.WriteString("Unpack error [" + filePath + "]: " + err.Error() + "\n")
+		} else {
+			newName := strings.TrimSuffix(filePath, ".packed.webp") + ".webp"
+			os.Stderr.WriteString("Successfully unpacked: " + filePath + " -> " + newName + "\n")
+		}
 
-    case (ext == ".txt" || ext == ".webp") && !strings.Contains(baseName, ".packed"):
-        if ext == ".txt" {
-            filePath = strings.TrimSuffix(filePath, ".txt") + ".webp"
-        }
+	case (ext == ".txt" || ext == ".webp") && !strings.Contains(baseName, ".packed"):
+		if ext == ".txt" {
+			filePath = strings.TrimSuffix(filePath, ".txt") + ".webp"
+		}
 
-        if err := PackWebp(filePath); err != nil {
-            os.Stderr.WriteString("Pack error [" + filePath + "]: " + err.Error() + "\n")
-        } else {
-            packedName := strings.TrimSuffix(filePath, ".webp") + ".packed.webp"
-            os.Stderr.WriteString("Successfully packed: " + filePath + " -> " + packedName + "\n")
-        }
+		if err := PackWebp(filePath); err != nil {
+			os.Stderr.WriteString("Pack error [" + filePath + "]: " + err.Error() + "\n")
+		} else {
+			packedName := strings.TrimSuffix(filePath, ".webp") + ".packed.webp"
+			os.Stderr.WriteString("Successfully packed: " + filePath + " -> " + packedName + "\n")
+		}
 
-    default:
-        os.Stderr.WriteString("Skipping unsupported file: " + filePath + "\n")
-    }
+	default:
+		os.Stderr.WriteString("Skipping unsupported file: " + filePath + "\n")
+	}
 }
