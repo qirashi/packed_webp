@@ -21,14 +21,12 @@ func main() {
 	jobs := make(chan string, numWorkers*2)
 	wg := sync.WaitGroup{}
 
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range numWorkers {
+		wg.Go(func() {
 			for file := range jobs {
 				processFile(file)
 			}
-		}()
+		})
 	}
 
 	for _, path := range os.Args[1:] {
