@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2025 Qirashi
+// Copyright (c) 2026 Qirashi
 // Project: packed_webp
 
 package main
 
 import (
-	"os"
 	"bytes"
 	"encoding/binary"
+	"os"
 	"strings"
 )
 
@@ -45,7 +45,7 @@ func UnpackWebp(packedFile string) error {
 	}
 
 	extraData := data[extrIndex+8 : extrIndex+8+int(binary.LittleEndian.Uint32(data[extrIndex+4:extrIndex+8]))]
-	
+
 	txtFile := replaceExt(packedFile, ".packed.webp", ".txt")
 	if err := os.WriteFile(txtFile, extraData, 0644); err != nil {
 		return err
@@ -90,7 +90,7 @@ func PackWebp(webpFile string) error {
 	}
 
 	binary.LittleEndian.PutUint32(buf.Bytes()[4:8], uint32(buf.Len()-8))
-	
+
 	if err := os.WriteFile(replaceExt(webpFile, ".webp", ".packed.webp"), buf.Bytes(), 0644); err != nil {
 		return err
 	}
